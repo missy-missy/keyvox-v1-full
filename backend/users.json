@@ -45,21 +45,7 @@
         "full_name": "Ashley Jewel Heart",
         "email": "charlottemissy435@gmail.com",
         "password_hash": "1dff2b17452f3c92790bb4e167ab2ad6f4845b1b62c20a871681d4c062deae18",
-        "voiceprint_path": "voiceprints\\shley.npy",
-        "locked_files": [
-            {
-                "name": "Group-8-Proposal-Defense.pptx",
-                "path": "C:\\Users\\ALB-XDE-LTP-222\\Downloads\\Group-8-Proposal-Defense.pptx",
-                "added_at": "2025-10-14T11:20:42Z",
-                "size_bytes": 12334409
-            },
-            {
-                "name": "Thesis-Tool-Defense-Rating-Sheet-AY-2025-2026.doc",
-                "path": "C:\\Users\\ALB-XDE-LTP-222\\Downloads\\Thesis-Tool-Defense-Rating-Sheet-AY-2025-2026.doc",
-                "added_at": "2025-10-14T11:25:40Z",
-                "size_bytes": 47104
-            }
-        ]
+        "voiceprint_path": "voiceprints\\shley.npy"
     },
     "user 1": {
         "full_name": "user 1",
@@ -121,80 +107,10 @@
         "password_hash": "1dff2b17452f3c92790bb4e167ab2ad6f4845b1b62c20a871681d4c062deae18",
         "voiceprint_path": "voiceprints\\ashhh.npy"
     },
-    "kage101": {
-        "full_name": "ddsvfd",
-        "email": "charlottemissy435@gmail.com",
-        "password_hash": "1dff2b17452f3c92790bb4e167ab2ad6f4845b1b62c20a871681d4c062deae18",
-        "voiceprint_path": "voiceprints\\kage101.npy",
-        "locked_files": [
-            {
-                "name": "folder.png",
-                "path": "C:\\Users\\ALB-XDE-LTP-222\\AppData\\Roaming\\KeyVox\\vault\\kage101\\folder.png",
-                "added_at": "2025-10-14T09:55:46Z",
-                "size_bytes": 9437
-            }
-        ]
-    },
-    "kage202": {
-        "full_name": "Kage Bun Shin",
-        "email": "charlottemissy435@gmail.com",
-        "password_hash": "9c91b6e025bfec8e5c14c191bbfac2f0981deecbbc95b742cda75b74b1b9646e",
-        "voiceprint_path": "voiceprints\\kage202.npy",
-        "locked_files": [
-            {
-                "name": "Group-8-Proposal-Defense.pptx",
-                "path": "C:\\Users\\ALB-XDE-LTP-222\\Downloads\\Group-8-Proposal-Defense.pptx",
-                "added_at": "2025-10-14T11:04:56Z",
-                "size_bytes": 12334409
-            }
-        ]
-    },
-    "group2research": {
-        "full_name": "Khobe Asis",
-        "email": "charlottemissy435@gmail.com",
-        "password_hash": "1dff2b17452f3c92790bb4e167ab2ad6f4845b1b62c20a871681d4c062deae18",
-        "voiceprint_path": "voiceprints\\group2research.npy"
-    },
-    "khobs": {
-        "full_name": "Khobe Asis",
-        "email": "charlottemissy435@gmail.com",
-        "password_hash": "9c91b6e025bfec8e5c14c191bbfac2f0981deecbbc95b742cda75b74b1b9646e",
-        "voiceprint_path": "voiceprints\\khobs.npy",
-        "locked_files": [
-            {
-                "name": "usb3.png",
-                "path": "C:\\Users\\ALB-XDE-LTP-222\\Downloads\\usb3.png",
-                "added_at": "2025-10-14T14:47:21Z",
-                "size_bytes": 9125
-            }
-        ]
-    },
-    "kage303": {
-        "full_name": "Kage Bun Shin",
+    "ashhhh": {
+        "full_name": "isadklass",
         "email": "ashjewelh@gmail.com",
-        "password_hash": "9c91b6e025bfec8e5c14c191bbfac2f0981deecbbc95b742cda75b74b1b9646e",
-        "voiceprint_path": "voiceprints\\kage303.npy",
-        "locked_files": [
-            {
-                "name": "2.png",
-                "path": "C:\\Users\\ALB-XDE-LTP-222\\Downloads\\Themes\\2.png",
-                "added_at": "2025-10-14T14:51:02Z",
-                "size_bytes": 722623
-            }
-        ]
-    },
-    "kage404": {
-        "full_name": "Kage Bun Shin",
-        "email": "ashjewelh@gmail.com",
-        "password_hash": "9c91b6e025bfec8e5c14c191bbfac2f0981deecbbc95b742cda75b74b1b9646e",
-        "voiceprint_path": "voiceprints\\kage404.npy",
-        "locked_files": [
-            {
-                "name": "3.png",
-                "path": "C:\\Users\\ALB-XDE-LTP-222\\Downloads\\Themes\\3.png",
-                "added_at": "2025-10-14T14:54:37Z",
-                "size_bytes": 861518
-            }
-        ]
+        "password_hash": "1dff2b17452f3c92790bb4e167ab2ad6f4845b1b62c20a871681d4c062deae18",
+        "voiceprint_path": "voiceprints\\ashhhh.npy"
     }
 }

@@ -3,6 +3,16 @@ from tkinter import font, messagebox
 import frontend_config as config
 from . import ui_helpers
 from PIL import Image, ImageTk
+# ---- top of file ----
+import os, sys
+
+# Ensure project root is on sys.path so "backend" is importable
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from backend.locked_files_store import load_locked_files
+
 
 # def show_applications_screen(app):
 #     """Shows the application management screen for a logged-in user with modern card + rounded button style."""
@@ -249,14 +259,35 @@ def show_applications_screen(app):
         app.show_change_otp_settings_screen)
 
     # File Manager Card
+    file_status_lines = _files_status_lines(app)
     _create_app_card(
         cards_frame, 
         3,
         getattr(app, "files_img", getattr(app, "folder_img", app.key_img)),
-        "File Manager", ["MALASA-RPH-ACTIVITY1.pdf"],
-        "Manage File", getattr(app, "show_file_settings_screen", 
-        app.show_manage_files_screen))
+        "File Manager",
+        file_status_lines,                 # <-- use the dynamic status line
+        "Manage Files",
+        getattr(app, "show_file_settings_screen", app.show_manage_files_screen)
+    )
 
+def _files_status_lines(app):
+    """Return ['No files yet'] or ['N files uploaded'] safely."""
+    user = getattr(app, "currently_logged_in_user", None) or {}
+    username = user.get("username")
+    if not username:
+        return ["No files yet"]  # not logged in / no username
+
+    try:
+        locked_files = load_locked_files(username) or []
+    except Exception:
+        locked_files = []
+
+    n = len(locked_files)
+    if n == 0:
+        return ["No files yet"]
+    if n == 1:
+        return ["1 file uploaded"]
+    return [f"{n} files uploaded"]
 
 def show_about_screen(app, event=None):
     """Displays the About Us screen with an icon + modern card design."""

@@ -16,14 +16,23 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 # Now always import with the full package path
-from backend.locked_files_store import (
-    load_locked_files,
-    save_locked_files,
-    build_meta_for_existing_path,
-)
+# from backend.locked_files_store import (
+#     load_locked_files,
+#     save_locked_files,
+#     append_locked_file,
+#     remove_locked_file_by_index,
+#     build_meta_for_existing_path,
+#     relink_locked_file,
+#     add_and_copy_file, 
+# )
+
+from backend.locked_files_store import load_locked_files, add_and_move_file
+
 
 # If OTP lives at project_root/OTP, this works. If it lives inside frontend, keep as-is.
 from OTP.send_otp import send_otp, verify_otp
+
+print("add_and_move_file loaded:", add_and_move_file)
 
 def navigate_to_enrollment(app, event=None):
     ui_helpers.update_nav_selection(app, "enrollment")
@@ -577,34 +586,54 @@ def show_enrollment_step4_file_upload(app):
     finish_btn.pack(side="right")  # <-- this was missing earlier
 
 def finalize_file_lock_and_finish(app):
+    """
+    Enrollment Step 4 finalizer:
+    - Allows only ONE file during enrollment.
+    - MOVES the selected file into keyvoxUserFiles/<username>/
+    - Appends metadata to backend/user_files_db/<username>.json
+    - Shows summary on success.
+    """
+    import os
     from tkinter import messagebox
-    from backend.locked_files_store import load_locked_files, save_locked_files, build_meta_for_existing_path
+    # Safe import (works whether you import as backend.module or module)
+    try:
+        from backend.locked_files_store import load_locked_files, add_and_move_file
+    except Exception:
+        from locked_files_store import load_locked_files, add_and_move_file
 
-    username = app.new_enrollment_data.get("username")
+    username = (getattr(app, "new_enrollment_data", {}) or {}).get("username")
     if not username:
         messagebox.showerror("Error", "Missing username for enrollment.")
         return
 
     # Only one file during enrollment
-    existing = load_locked_files(username)
+    try:
+        existing = load_locked_files(username) or []
+    except Exception as e:
+        messagebox.showerror("Error", f"Could not load locked files: {e}")
+        return
+
     if len(existing) >= 1:
         messagebox.showwarning(
             "Limit",
-            "Only one file can be locked during enrollment.\nYou can add and delete later in Manage Files."
+            "Only one file can be locked during enrollment.\nYou can add/delete more later in Manage Files."
         )
         return
 
-    if not getattr(app, "selected_lock_path", None):
+    # Ensure a selection exists
+    sel_path = getattr(app, "selected_lock_path", None)
+    if not sel_path or not os.path.isfile(sel_path):
         messagebox.showwarning("Missing", "Please select a file to lock.")
         return
 
+    # MOVE the file and append metadata
     try:
-        meta = build_meta_for_existing_path(app.selected_lock_path)  # NO COPY
-        save_locked_files(username, [meta])  # store single file
+        add_and_move_file(username, sel_path)
     except Exception as e:
         messagebox.showerror("Save Failed", f"Could not save locked file: {e}")
         return
 
+    # Done
     show_enrollment_summary(app)
 
 def show_enrollment_summary(app):

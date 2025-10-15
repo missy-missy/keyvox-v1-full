@@ -644,21 +644,23 @@ def show_change_otp_settings_verification_screen(app):
 
 # --------------- Manage Files ------------------------
 def show_manage_files_screen(app):
-    """Displays the Manage Files screen (upload, view, delete) backed by backend/users.json."""
+    """Displays the Manage Files screen (upload, view, delete) using per-user storage."""
     import os, sys
     import tkinter as tk
     import tkinter.font as tkFont
     from tkinter import filedialog as fd, messagebox
 
-    # --- Ensure backend imports ---
+    # --- Ensure backend import works ---
     backend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../backend"))
     if backend_dir not in sys.path:
         sys.path.insert(0, backend_dir)
 
     try:
         from locked_files_store import (
-            load_locked_files, append_locked_file, remove_locked_file_by_index,
-            MAX_LOCKED_FILES, build_meta_for_existing_path
+            load_locked_files,
+            remove_locked_file_by_index,
+            add_and_move_file,
+            MAX_LOCKED_FILES,
         )
     except Exception as e:
         for w in app.content_frame.winfo_children():
@@ -678,21 +680,22 @@ def show_manage_files_screen(app):
     font_subtitle = tkFont.Font(family="Poppins", size=10)
     font_small    = tkFont.Font(family="Poppins", size=9)
     font_button   = tkFont.Font(family="Poppins", size=10)
+    font_list     = tkFont.Font(family="Poppins", size=11)
 
     # --- Resolve active username ---
     def _active_username():
         u = getattr(app, "currently_logged_in_user", None)
         if isinstance(u, dict):
-            name = u.get("username") or u.get("user") or u.get("name")
-            if name:
-                return name
+            for k in ("username", "user", "name"):
+                if u.get(k):
+                    return u[k]
         return getattr(app, "logged_in_username", None)
 
     username = _active_username()
 
     # --- If not logged in ---
     if not username:
-        card = tk.Frame(app.content_frame, width=720, height=220, bg=LIGHT_CARD_BG)
+        card = tk.Frame(app.content_frame, width=720, height=260, bg=LIGHT_CARD_BG)
         card.pack(pady=28); card.pack_propagate(False)
         tk.Label(card, text="Manage Files", font=font_title, fg="white", bg=LIGHT_CARD_BG)\
             .pack(anchor="w", padx=40, pady=(20, 6))
@@ -702,7 +705,7 @@ def show_manage_files_screen(app):
         return
 
     # --- Card (centered) ---
-    card = tk.Frame(app.content_frame, width=720, height=440, bg=LIGHT_CARD_BG)
+    card = tk.Frame(app.content_frame, width=720, height=480, bg=LIGHT_CARD_BG)
     card.pack(expand=True)
     card.pack_propagate(False)
 
@@ -710,42 +713,31 @@ def show_manage_files_screen(app):
     top_bar = tk.Frame(card, bg=LIGHT_CARD_BG)
     top_bar.pack(fill="x", pady=(20, 10), padx=30)
 
-    back_button = tk.Button(
+    tk.Button(
         top_bar,
-        image=app.back_img,
-        bg=LIGHT_CARD_BG,
-        relief="flat",
-        bd=0,
-        activebackground=LIGHT_CARD_BG,
-        cursor="hand2",
+        image=getattr(app, "back_img", None),
+        bg=LIGHT_CARD_BG, relief="flat", bd=0,
+        activebackground=LIGHT_CARD_BG, cursor="hand2",
         command=lambda: app.show_applications_screen()
-    )
-    back_button.pack(side="left")
+    ).pack(side="left")
 
     tk.Label(
-        top_bar,
-        text="Manage Files",
-        font=("Poppins", 14, "bold"),
-        fg="white",
-        bg=LIGHT_CARD_BG
+        top_bar, text="Manage Files", font=font_title, fg="white", bg=LIGHT_CARD_BG
     ).pack(side="left", padx=(10, 0))
 
     # --- Subtitle ---
     tk.Label(
         card,
-        text="Upload, view, or delete files used for authentication.",
-        font=("Poppins", 10),
-        fg="white",
-        bg=LIGHT_CARD_BG
-    ).pack(anchor="w", padx=50, pady=(0, 15))
+        text="Upload, open, or delete files used for authentication.",
+        font=font_subtitle, fg="white", bg=LIGHT_CARD_BG
+    ).pack(anchor="w", padx=50, pady=(0, 12))
 
     # --- Listbox (centered) ---
     list_wrap = tk.Frame(card, bg=LIGHT_CARD_BG)
-    list_wrap.pack(padx=50, pady=(0, 20), fill="x")
+    list_wrap.pack(padx=50, pady=(0, 10), fill="both", expand=True)
 
     file_listbox = tk.Listbox(
-        list_wrap, font=("Poppins", 11),
-        selectmode="extended", height=8,
+        list_wrap, font=font_list, selectmode="extended", height=10,
         activestyle="none"
     )
     file_listbox.pack(side="left", fill="both", expand=True)
@@ -754,161 +746,160 @@ def show_manage_files_screen(app):
     scrollbar.pack(side="right", fill="y")
     file_listbox.config(yscrollcommand=scrollbar.set)
 
-    # --- Load user files ---
-    try:
-        app.managed_files = load_locked_files(username) or []
-        load_error = ""
-    except Exception as e:
-        app.managed_files = []
-        load_error = str(e)
-
-    # --- Empty state ---
+    # --- Empty state label ---
     empty_state = tk.Label(
         list_wrap,
-        text="No locked files yet.\nClick ‘Upload File’ to add one.",
-        font=font_subtitle,
-        fg="white",
-        bg=LIGHT_CARD_BG,
-        justify="center"
+        text="No locked files yet.\nClick ‘Upload File’ to add.",
+        font=font_subtitle, fg="white", bg=LIGHT_CARD_BG, justify="center"
     )
 
-    def _toggle_empty_state():
-        if len(app.managed_files) == 0:
-            empty_state.pack(expand=True)
-        else:
-            empty_state.pack_forget()
-
-    # --- Feedback message line ---
-    msg_var = tk.StringVar(value=("" if not load_error else f"Note: {load_error}"))
+    # --- Bottom info line (messages) ---
+    msg_var = tk.StringVar(value="")
     msg_lbl = tk.Label(card, textvariable=msg_var, font=font_small, fg="white", bg=LIGHT_CARD_BG)
-    msg_lbl.pack(anchor="w", padx=50, pady=(6, 0))
+    msg_lbl.pack(anchor="w", padx=50, pady=(4, 0))
 
     def _set_msg(text, color="white"):
         msg_var.set(text)
         msg_lbl.config(fg=color)
 
-    # ===================================================
-    #                ACTION HANDLERS
-    # ===================================================
-    def do_upload_file():
-        if not username:
-            _set_msg("Not logged in.", color="#FFEBEE")
-            return
-        if len(app.managed_files) >= MAX_LOCKED_FILES:
-            _set_msg(f"Limit reached ({MAX_LOCKED_FILES}).", color="#FFEBEE")
-            return
-
-        path = fd.askopenfilename(title="Select a file to link")
-        if not path:
-            return
-
-        # --- Prevent duplicates by filename ---
-        new_name = os.path.basename(path).lower()
-        existing_names = {it["name"].lower() for it in app.managed_files if "name" in it}
-        if new_name in existing_names:
-            _set_msg(f"'{os.path.basename(path)}' is already in the list.", color="#FFEBEE")
-            return
-
+    # --- Load and render helpers ---
+    def _load_items():
         try:
-            meta = build_meta_for_existing_path(path)  # just references path
-            append_locked_file(username, meta)         # writes to users.json
-            app.managed_files = load_locked_files(username)
-            _refresh_list()
-            _set_msg(f"Added: {meta['name']}", color="#E8F5E9")
+            return load_locked_files(username) or []
         except Exception as e:
-            _set_msg(f"Upload failed: {e}", color="#FFEBEE")
-
-    def do_view_selected(_evt=None):
-        sels = list(file_listbox.curselection())
-        if not sels:
-            _set_msg("Select a file to view.", color="#FFEBEE")
-            return
-        if len(sels) > 1:
-            _set_msg("Opening the first selected file only.", color="white")
-
-        idx = sels[0]
-        item = app.managed_files[idx]
-        path = item.get("path")
-        if not path or not os.path.exists(path):
-            _set_msg("File not found on disk. It may have been moved or renamed.", color="#FFEBEE")
-            return
-
-        try:
-            if sys.platform.startswith("win"):
-                os.startfile(path)
-            elif sys.platform == "darwin":
-                import subprocess; subprocess.Popen(["open", path])
-            else:
-                import subprocess; subprocess.Popen(["xdg-open", path])
-            _set_msg(f"Opened: {item['name']}")
-        except Exception as e:
-            _set_msg(f"Cannot open file: {e}", color="#FFEBEE")
-
-    def do_delete_selected():
-        if not username:
-            _set_msg("Not logged in.", color="#FFEBEE")
-            return
-
-        sels = list(file_listbox.curselection())
-        if not sels:
-            _set_msg("Select one or more files to delete.", color="#FFEBEE")
-            return
-
-        if not messagebox.askyesno("Delete From List", f"Remove {len(sels)} item(s) from the list?"):
-            return
-
-        sels.sort(reverse=True)
-        for idx in sels:
-            remove_locked_file_by_index(username, idx)
-
-        app.managed_files = load_locked_files(username)
-        _refresh_list()
-        _set_msg(f"Removed {len(sels)} item(s) from the list.", color="#FFEBEE")
-
-    # ===================================================
-    #                BUTTONS ROW
-    # ===================================================
-    actions = tk.Frame(card, bg=LIGHT_CARD_BG)
-    actions.pack(pady=(10, 10))
-
-    btn_style = dict(
-        font=font_button,
-        relief="flat",
-        bg="#F5F5F5",
-        fg="black",
-        padx=15,
-        pady=6
-    )
-
-    upload_btn = tk.Button(actions, text="Upload File", command=do_upload_file, **btn_style)
-    upload_btn.pack(side="left", padx=10)
-
-    view_btn = tk.Button(actions, text="View Selected", command=do_view_selected, **btn_style)
-    view_btn.pack(side="left", padx=10)
-
-    del_btn = tk.Button(actions, text="Delete Selected", command=do_delete_selected, **btn_style)
-    del_btn.pack(side="left", padx=10)
-
-    # ===================================================
-    #                SUPPORTING FUNCTIONS
-    # ===================================================
-    def _update_button_states(_evt=None):
-        sels = file_listbox.curselection()
-        count = len(sels)
-        view_btn.config(state=("normal" if count == 1 else "disabled"))
-        del_btn.config(state=("normal" if count >= 1 else "disabled"))
+            _set_msg(f"Error loading files: {e}", "red")
+            return []
 
     def _refresh_list():
+        app.managed_files = _load_items()
         file_listbox.delete(0, tk.END)
-        for item in app.managed_files:
-            file_listbox.insert(tk.END, item.get("name", "(unnamed)"))
-        _toggle_empty_state()
-        _update_button_states()
+        for it in app.managed_files:
+            name = it.get("name") or os.path.basename(it.get("stored_path") or it.get("path") or "")
+            file_listbox.insert(tk.END, name or "(unnamed)")
+        # Empty state toggle
+        if len(app.managed_files) == 0:
+            empty_state.pack(expand=True)
+        else:
+            empty_state.pack_forget()
+        # Count
+        n = len(app.managed_files)
+        if n == 0:
+            _set_msg("No files yet.")
+        elif n == 1:
+            _set_msg("1 file uploaded.")
+        else:
+            _set_msg(f"{n} files uploaded.")
 
-    # --- Bindings ---
-    file_listbox.bind("<<ListboxSelect>>", _update_button_states)
-    file_listbox.bind("<Double-Button-1>", do_view_selected)
-    file_listbox.bind("<Delete>", lambda e: do_delete_selected())
+    # --- Actions ---
+    def on_upload():
+        # Allow selecting multiple files, move each into the user's folder.
+        paths = fd.askopenfilenames(title="Select file(s) to lock")
+        if not paths:
+            return
+        # Capacity guard
+        current = len(app.managed_files)
+        remaining = MAX_LOCKED_FILES - current
+        if remaining <= 0:
+            messagebox.showwarning("Limit", f"Maximum of {MAX_LOCKED_FILES} files reached.")
+            return
+
+        added = 0
+        errors = 0
+        for p in paths[:remaining]:
+            try:
+                add_and_move_file(username, p)
+                added += 1
+            except Exception as e:
+                errors += 1
+                _set_msg(f"Failed to add: {os.path.basename(p)} ({e})", "red")
+
+        if added:
+            _refresh_list()
+        if errors == 0 and added:
+            _set_msg(f"Added {added} file(s).")
+        elif errors:
+            _set_msg(f"Added {added}, {errors} failed.", "orange")
+
+    def _selected_indices():
+        sel = list(file_listbox.curselection())
+        sel.sort()
+        return sel
+
+    def on_open():
+        idxs = _selected_indices()
+        if not idxs:
+            messagebox.showinfo("Open File", "Select a file to open.")
+            return
+        # Open each selected file
+        for i in idxs:
+            if not (0 <= i < len(app.managed_files)):
+                continue
+            meta = app.managed_files[i]
+            path = meta.get("stored_path") or meta.get("path")  # legacy-safe
+            if path and os.path.isfile(path):
+                try:
+                    # Windows
+                    os.startfile(path)
+                except AttributeError:
+                    # macOS / Linux
+                    import subprocess, sys as _sys
+                    if _sys.platform.startswith("darwin"):
+                        subprocess.run(["open", path])
+                    else:
+                        subprocess.run(["xdg-open", path])
+            else:
+                messagebox.showerror("Missing File", f"File not found on disk:\n{path}")
+
+    def on_delete():
+        idxs = _selected_indices()
+        if not idxs:
+            messagebox.showinfo("Delete File", "Select file(s) to delete.")
+            return
+        if not messagebox.askyesno("Confirm Delete", f"Delete {len(idxs)} selected file(s)? This cannot be undone."):
+            return
+
+        # Delete from the highest index down to keep indices stable
+        deleted = 0
+        for i in sorted(idxs, reverse=True):
+            try:
+                removed = remove_locked_file_by_index(username, i)
+                if removed:
+                    deleted += 1
+            except Exception as e:
+                _set_msg(f"Delete failed at index {i}: {e}", "red")
+
+        if deleted:
+            _refresh_list()
+            _set_msg(f"Deleted {deleted} file(s).")
+
+    # --- Buttons row ---
+    btns = tk.Frame(card, bg=LIGHT_CARD_BG)
+    btns.pack(fill="x", padx=50, pady=(6, 12))
+
+    tk.Button(
+        btns, text="Upload File", font=font_button,
+        bg="#F5F5F5", fg="black", relief="flat", padx=12, pady=6,
+        command=on_upload
+    ).pack(side="left")
+
+    tk.Button(
+        btns, text="Open", font=font_button,
+        bg="#F5F5F5", fg="black", relief="flat", padx=12, pady=6,
+        command=on_open
+    ).pack(side="left", padx=(10, 0))
+
+    tk.Button(
+        btns, text="Delete", font=font_button,
+        bg="#F5F5F5", fg="black", relief="flat", padx=12, pady=6,
+        command=on_delete
+    ).pack(side="left", padx=(10, 0))
+
+    tk.Button(
+        btns, text="Refresh", font=font_button,
+        bg="#F5F5F5", fg="black", relief="flat", padx=12, pady=6,
+        command=_refresh_list
+    ).pack(side="right")
 
     # --- Initial render ---
     _refresh_list()
+
